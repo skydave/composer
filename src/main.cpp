@@ -75,7 +75,7 @@ void shutdown()
 int main(int argc, char ** argv)
 {
 	TcpSocket s;
-	s.Connect( IpEndpointName("127.0.0.1", 12345) );
+	s.Bind( IpEndpointName(12345) );
 
 	base::Application app;
 	glviewer = new base::GLViewer( 800, 600, "demo" );

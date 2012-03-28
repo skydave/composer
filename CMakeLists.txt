@@ -139,7 +139,7 @@ sourceGroups( app_sources )
 #generateQtOutputs( app_sources moc_outputs ui_outputs)
 
 # Create an executable
-add_executable(app ${app_sources} ${moc_outputs} ${ui_outputs})
+add_executable(composer ${app_sources} ${moc_outputs} ${ui_outputs})
 
 # add base to include directories
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/base )
@@ -163,7 +163,7 @@ if( CMAKE_SYSTEM_NAME MATCHES Linux )
 		message(FATAL_ERROR "Failed to find X11 which is required to build under linux")
 	endif(NOT X11_FOUND)
 
-	target_link_libraries(app ${X11_LIBRARIES})
+	target_link_libraries(composer ${X11_LIBRARIES})
 
 	# alsa
 	find_package(ALSA)
@@ -172,16 +172,16 @@ if( CMAKE_SYSTEM_NAME MATCHES Linux )
 		message(FATAL_ERROR "Failed to find ALSA which is required to build under linux")
 	endif(NOT ALSA_FOUND)
 
-	target_link_libraries(app ${ALSA_LIBRARIES})
+	target_link_libraries(composer ${ALSA_LIBRARIES})
 
 endif( CMAKE_SYSTEM_NAME MATCHES Linux )
 
 # OpenGL
 INCLUDE(FindOpenGL)
-target_link_libraries(app ${OPENGL_gl_LIBRARY})
+target_link_libraries(composer ${OPENGL_gl_LIBRARY})
 
 # Qt
-target_link_libraries(app ${QT_LIBRARIES})
+target_link_libraries(composer ${QT_LIBRARIES})
 
 # FBX
-target_link_libraries(app ${FBX_LIBRARIES})
+target_link_libraries(composer ${FBX_LIBRARIES})
