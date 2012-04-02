@@ -4,7 +4,8 @@
 //
 //============================================================================
 
-
+#include <QtGui>
+#include <QApplication>
 
 #include <stdio.h>
 #include <cstdlib>
@@ -70,12 +71,35 @@ void shutdown()
 {
 }
 
-struct RemoteApplication
+struct Application
+{
+	// global application scope operator graph ptr etc.
+	// render function will access this
+
+	virtual void loadOperatorGraph( /*BSONPtr operatorGraph*/ )
+	{
+
+	}
+
+	virtual void play()
+	{
+	}
+
+	virtual void stop()
+	{
+	}
+	virtual void setTime()
+	{
+	}
+};
+
+struct RemoteApplication : public Application
 {
 	bool                    m_isConnected;
 	TcpSocket                    m_server;
 	TcpSocket                    m_client;
 	tthread::thread    *m_listeningThread;
+	//TODO: base::BSONPtr m_operatorGraph;
 
 	RemoteApplication() : m_isConnected(false)
 	{
@@ -94,21 +118,29 @@ struct RemoteApplication
 	// stop
 	// setTime();
 	// load( std::string operatorPath, BSONPtr data )
-	void loadOperatorGraph( /*BSONPtr operatorGraph*/ )
+	virtual void loadOperatorGraph( /*TODO:BSONPtr operatorGraph*/ )
 	{
-		if( !m_isConnected )
-			return;
+		//TODO:m_operatorGraph = operatorGraph;
+		if( m_isConnected )
+		{
+			// send command to client
+			std::cout << "send loadOperatorGraph" << std::endl;
+			std::string test = "huhu";
+			m_client.Send(test.c_str(), test.size());
 
-		// send command to client
-		std::cout << "sending test message..." << std::endl;
-		std::string test = "huhu";
-		m_client.Send(test.c_str(), test.size());
+			// todo:
+			//BSONPtr command = BSON::create();
+			//command["command"] = "loadOperatorGraph";
+			//command["operatorGraph"] = m_operatorGraph;
+			//unsigned char *commandPacket = BSON::pack( command );
+			//m_client.Send(commandPacket, BSON::getPacketSize(commandPacket));
 
-		// receive response
-		//char buffer[1000];
-		//std::cout << "sending test message..." << std::endl;
-		//int numBytesReceived = client.Receive( buffer, 10000000 );
-		//std::cout << numBytesReceived << std::endl;
+			// receive response
+			//char buffer[1000];
+			//std::cout << "sending test message..." << std::endl;
+			//int numBytesReceived = client.Receive( buffer, 10000000 );
+			//std::cout << numBytesReceived << std::endl;
+		}
 	}
 
 
@@ -117,38 +149,22 @@ struct RemoteApplication
 	static void server( void *args )
 	{
 		RemoteApplication *_this = (RemoteApplication *)args;
-		std::cout << "listening for client..." << std::endl;
 		_this->m_server.Bind( IpEndpointName(12345) );
 		_this->m_server.Listen();
 
-		 _this->m_server.Accept( _this->m_client );
-
-		if( _this->m_client.isValid() )
+		while( true )
 		{
-			std::cout << "connected to client..." << std::endl;
-			_this->m_isConnected = true;
+			std::cout << "listening for client..." << std::endl;
+			_this->m_server.Accept( _this->m_client );
+			if(_this->m_client.isValid())
+			{
+				std::cout << "connected to client..." << std::endl;
+				_this->m_isConnected = true;
 
-			//_this->loadOperatorGraph();
-
-			// sleep until we have something to do
-			/*
-
-			// sending test message
-			std::cout << "sending test message..." << std::endl;
-			std::string test = "huhu";
-			client.Send(test.c_str(), test.size());
-
-			// receive response
-			char buffer[1000];
-			std::cout << "sending test message..." << std::endl;
-			int numBytesReceived = client.Receive( buffer, 10000000 );
-			std::cout << numBytesReceived << std::endl;
-			*/
-
-			//SOCKET_ERROR
+				_this->loadOperatorGraph();
+			}else
+				_this->m_isConnected = false;
 		}
-
-		std::cout << "closing thread" << std::endl;
 	}
 };
 
@@ -161,8 +177,30 @@ int main(int argc, char ** argv)
 {
 	RemoteApplication remoteApp;
 
-	base::Application app;
-	glviewer = new base::GLViewer( 800, 600, "demo" );
-	glviewer->show();
+	// TODO:initialize application - this may be done later with a standalone driver
+	//
+	// base::BSONPtr opgraph = BSON::create();
+	// base::BSONPtr operator = BSON::create();
+	// base::BSONPtr clearOpData = BSON::create();
+	// operator["type"] = "ClearOp";
+	// clearOpData["clearColor"] = math::Vec3f(1.0f, 0.0f, 0.0f);
+	// operator["data"] = clearOpData;
+	// base::BSONPtr operators = BSON::create();
+	// operators.append( operator )
+	// opgraph["ops"] = operators;
+	// opgraph["connections"] = operators;
+	// opgraph["roots"]
+	// remoteApp.loadOperatorGraph( opgraph );
+
+	//Q_INIT_RESOURCE(application);
+	QApplication app(argc, argv);
+	app.setOrganizationName("composer");
+	app.setApplicationName("composer");
+
+	QMainWindow mainWin;
+	mainWin.resize(800, 600);
+	mainWin.show();
+
+
 	return app.exec();
 }
