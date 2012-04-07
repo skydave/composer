@@ -15,12 +15,15 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <streambuf>
+
 
 #include <ui/GLViewer.h>
 #include <gltools/gl.h>
 #include <gltools/misc.h>
 #include <util/StringManip.h>
 #include <util/Path.h>
+#include <util/BSON.h>
 #include <gfx/Geometry.h>
 #include <gfx/ObjIO.h>
 #include <gfx/Shader.h>
@@ -36,6 +39,9 @@
 
 
 #include <3rdparty\ip\TcpSocket.h>
+
+
+#include <sstream>
 
 base::GLViewer *glviewer;
 base::ContextPtr context;
@@ -95,11 +101,11 @@ struct Application
 
 struct RemoteApplication : public Application
 {
-	bool                    m_isConnected;
-	TcpSocket                    m_server;
-	TcpSocket                    m_client;
-	tthread::thread    *m_listeningThread;
-	//TODO: base::BSONPtr m_operatorGraph;
+	bool                          m_isConnected;
+	TcpSocket                          m_server;
+	TcpSocket                          m_client;
+	tthread::thread          *m_listeningThread;
+	base::bson::BSONPtr         m_operatorGraph;
 
 	RemoteApplication() : m_isConnected(false)
 	{
@@ -118,22 +124,22 @@ struct RemoteApplication : public Application
 	// stop
 	// setTime();
 	// load( std::string operatorPath, BSONPtr data )
-	virtual void loadOperatorGraph( /*TODO:BSONPtr operatorGraph*/ )
+	virtual void loadOperatorGraph( base::bson::BSONPtr operatorGraph )
 	{
-		//TODO:m_operatorGraph = operatorGraph;
+		m_operatorGraph = operatorGraph;
 		if( m_isConnected )
 		{
 			// send command to client
 			std::cout << "send loadOperatorGraph" << std::endl;
-			std::string test = "huhu";
-			m_client.Send(test.c_str(), test.size());
+			//std::string test = "huhu";
+			//m_client.Send(test.c_str(), test.size());
 
 			// todo:
-			//BSONPtr command = BSON::create();
-			//command["command"] = "loadOperatorGraph";
-			//command["operatorGraph"] = m_operatorGraph;
-			//unsigned char *commandPacket = BSON::pack( command );
-			//m_client.Send(commandPacket, BSON::getPacketSize(commandPacket));
+			base::bson::Helper command = base::bson::create();
+			command["command"] = "loadOperatorGraph";
+			command["operatorGraph"] = m_operatorGraph;
+			base::bson::PacketPtr packet = base::bson::pack( command );
+			m_client.Send(packet->m_data, packet->m_size);
 
 			// receive response
 			//char buffer[1000];
@@ -161,7 +167,7 @@ struct RemoteApplication : public Application
 				std::cout << "connected to client..." << std::endl;
 				_this->m_isConnected = true;
 
-				_this->loadOperatorGraph();
+				_this->loadOperatorGraph(_this->m_operatorGraph);
 			}else
 				_this->m_isConnected = false;
 		}
@@ -175,22 +181,87 @@ struct RemoteApplication : public Application
 
 int main(int argc, char ** argv)
 {
-	RemoteApplication remoteApp;
-
+	//RemoteApplication remoteApp;
+	/*
 	// TODO:initialize application - this may be done later with a standalone driver
 	//
-	// base::BSONPtr opgraph = BSON::create();
-	// base::BSONPtr operator = BSON::create();
-	// base::BSONPtr clearOpData = BSON::create();
-	// operator["type"] = "ClearOp";
-	// clearOpData["clearColor"] = math::Vec3f(1.0f, 0.0f, 0.0f);
-	// operator["data"] = clearOpData;
-	// base::BSONPtr operators = BSON::create();
-	// operators.append( operator )
-	// opgraph["ops"] = operators;
-	// opgraph["connections"] = operators;
-	// opgraph["roots"]
-	// remoteApp.loadOperatorGraph( opgraph );
+	base::bson::Helper opgraph = base::bson::create();
+	base::bson::Helper op = base::bson::create();
+	base::bson::Helper clearOpData = base::bson::create();
+
+	op["type"] = "ClearOp";
+	clearOpData["clearColor"] = math::Vec3f(1.0f, 0.0f, 0.0f);
+	op["data"] = clearOpData;
+
+	base::bson::Helper operators = base::bson::create();
+	operators += op;
+
+	opgraph["ops"] = operators;
+	opgraph["connections"] = operators;
+	opgraph["roots"];
+	remoteApp.loadOperatorGraph( opgraph );
+	*/
+	//test
+	if(0)
+	{
+		// tested datatypes:
+		// int, float, string, vec3f, bool, bson(nested)
+		// todo: array, binary blobs
+
+		int in_int = 13;
+		std::string in_str = "testme";
+		float in_float = 1.2f;
+		math::Vec3f in_vec3f = math::Vec3f( 0.1f, 0.2f, 0.3f );
+		bool in_bool = true;
+
+		base::bson::Helper in = base::bson::create();
+		in["int"] = in_int;
+		in["str"] = in_str;
+		in["float"] = in_float;
+
+		base::bson::Helper in_bson = base::bson::create();
+		in_bson["int"] = in_int;
+		in_bson["str"] = in_str;
+		in_bson["float"] = in_float;
+		in_bson["vec3f"] = in_vec3f;
+		in_bson["bool"] = in_bool;
+		in["bson"] = in_bson;
+
+		base::bson::PacketPtr packet = base::bson::pack( in );
+		base::bson::Helper out = base::bson::unpack( packet );
+
+
+
+		int out_int = 0;
+		std::string out_str = "";
+		float out_float = 0.0f;
+		math::Vec3f out_vec3f(0.0f, 0.0f, 0.0f);
+		bool out_bool = false;
+		base::bson::Helper out_bson = out["bson"];
+
+
+		out_int = out["int"];
+		out_str = out["str"].asString();
+		out_float = out["float"];
+
+
+		std::cout << out_int << std::endl;
+		std::cout << out_str << std::endl;
+		std::cout << out_float << std::endl;
+
+		out_int = out_bson["int"];
+		out_str = out_bson["str"].asString();
+		out_float = out_bson["float"];
+		out_vec3f = out_bson["vec3f"];
+		out_bool = out_bson["bool"];
+
+		std::cout << "from out_bson:" << std::endl;
+		std::cout << out_int << std::endl;
+		std::cout << out_str << std::endl;
+		std::cout << out_float << std::endl;
+		std::cout << out_vec3f.x << " " << out_vec3f.y << " " << out_vec3f.z << std::endl;
+		std::cout << (out_bool ? "true" : "false") << std::endl;
+	}
 
 	//Q_INIT_RESOURCE(application);
 	QApplication app(argc, argv);
